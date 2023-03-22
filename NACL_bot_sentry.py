@@ -30,24 +30,32 @@ sns_client = boto3.client('sns')
 
 def lambda_handler(event, context):
     event_detail = event.get('detail', {})
-    if delete_nacl_entry(event_detail):
-        log.info("deleteEntry: Successful")
-        if send_notification(event_detail):
-            log.info("SNS publish: Successful")
+    event_name = event_detail.get('eventName')
+    networkacl_id = event_detail.get('requestParameters', {}).get('networkAclId')
+    
+    if networkacl_id == NACL_ID and event_name == "CreateNetworkAclEntry":
+        if delete_nacl_entry(event_detail):
+            log.info("deleteEntry: Successful")
+            if send_notification(event_detail):
+                log.info("SNS publish: Successful")
+                return {
+                    'statusCode': 200,
+                    'body': json.dumps({'message': "Successful requests."})
+                }
+            log.info("SNS publish: an error occurred")    
             return {
-                'statusCode': 200,
-                'body': json.dumps({'message': "Successful requests."})
+                'statusCode': 206,
+                'body': json.dumps({'error': "An error occurred in the SNS publish request."})
             }
-        log.info("SNS publish: an error occurred")    
+        log.info("deleteEntry: an error occurred")    
+        if not send_notification(event_detail, False):
+            return {
+                'statusCode': 500,
+                'body': json.dumps({'error': "An error occurred, all requests failed."})
+            }
         return {
             'statusCode': 206,
-            'body': json.dumps({'error': "An error occurred in the SNS publish request."})
-        }
-    log.info("deleteEntry: an error occurred")    
-    if not send_notification(event_detail, False):
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': "An error occurred, all requests failed."})
+            'body': json.dumps({'error': "An error occurred in the deleteEntry request."})
         }
 
 
