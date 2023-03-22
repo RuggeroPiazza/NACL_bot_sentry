@@ -75,6 +75,3 @@ Under “destination” simply select the topic created in step 5. If the topic 
 8. ***Test*** the function:
 Add an inbound rule to the network Acl of your VPC. Adding this rule creates an EC2 CreateNetworkAclEntry service event, which trigger the Lambda function. 
 After refreshing a couple of times, the new inbound rule should disappear and you should receive an email with the relative information.
-
-
-For debugging purpose, a JSON file with a sample of the CreateNetworkAclEntry event is added to this repository. 
