@@ -20,11 +20,12 @@ log.setLevel(logging.INFO)
 NACL_ID = os.environ.get('nacl_id')
 SNS_TOPIC_ARN = os.environ['sns_topic_arn']
 if NACL_ID is None:
-    raise Exception("NACL ID not found")
+    raise Exception("NACL ID not found, make sure the environment variable is been set correctly.")
 
-# instantiate boto3 resource
+# instantiate boto3 resource and clients
 ec2_resource = boto3.resource('ec2')
 NETWORK_ACL = ec2_resource.NetworkAcl(NACL_ID)
+sns_client = boto3.client('sns')
 
 
 def lambda_handler(event, context):
@@ -42,12 +43,11 @@ def lambda_handler(event, context):
             'statusCode': 206,
             'body': json.dumps({'error': "An error occurred in the SNS publish request."})
         }
-        
+    log.info("deleteEntry: an error occurred")    
     if not send_notification(event_detail, False):
-        log.info("deleteEntry: an error occurred")
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': "an error occurred in the deleteEntry request."})
+            'body': json.dumps({'error': "An error occurred, all requests failed."})
         }
 
 
@@ -94,7 +94,7 @@ def send_notification(event_detail, success=True):
             f"cidr_block: {request_parameters['cidrBlock']}\n"
             ) 
     try:
-        boto3.client('sns').publish(TargetArn=SNS_TOPIC_ARN, Message=message, Subject=subject)
+        sns_client.publish(TargetArn=SNS_TOPIC_ARN, Message=message, Subject=subject)
         return True
     except botocore.exceptions.ClientError as error:
         log.error(f"Boto3 API returned error: {error}")
